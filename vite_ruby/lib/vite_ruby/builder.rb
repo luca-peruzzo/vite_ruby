@@ -13,7 +13,7 @@ class ViteRuby::Builder
   def build(*args)
     last_build = last_build_metadata(ssr: args.include?('--ssr'))
 
-    if args.delete('--force') || last_build.stale? || config.manifest_paths.empty?
+    if args.delete('--force') || last_build.stale? || config.manifest_paths.empty? || !build_output_exists?(ssr: args.include?('--ssr'))
       stdout, stderr, status = build_with_vite(*args)
       log_build_result(stdout, stderr, status)
       record_build_metadata(last_build, errors: stderr, success: status.success?)
@@ -32,7 +32,7 @@ class ViteRuby::Builder
     ViteRuby::Build.from_previous(last_build_path(ssr: ssr), watched_files_digest)
   end
 
-private
+  private
 
   extend Forwardable
 
@@ -47,6 +47,14 @@ private
   # Internal: The file path where metadata of the last build is stored.
   def last_build_path(ssr:)
     config.build_cache_dir.join("last#{ '-ssr' if ssr }-build-#{ config.mode }.json")
+  end
+
+  def build_output_exists?(ssr:)
+    if ssr
+      Dir.exist? config.ssr_output_dir
+    else
+      Dir.exist? config.build_output_dir
+    end
   end
 
   # Internal: Returns a digest of all the watched files, allowing to detect
